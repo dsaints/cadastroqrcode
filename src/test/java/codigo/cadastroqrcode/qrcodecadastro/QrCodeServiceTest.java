@@ -3,23 +3,26 @@ package codigo.cadastroqrcode.qrcodecadastro;
 import codigo.cadastroqrcode.qrcodecadastro.entity.QrCode;
 import codigo.cadastroqrcode.qrcodecadastro.repository.QrCodeRepository;
 import codigo.cadastroqrcode.qrcodecadastro.service.QrCodeService;
-import org.junit.jupiter.api.BeforeEach;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.annotation.DirtiesContext;
 
 import java.time.LocalDate;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.times;
 
+@ExtendWith(MockitoExtension.class)
+@DataJpaTest
+@Import(QrCodeService.class)
+@DirtiesContext
 public class QrCodeServiceTest {
 
     @Mock
@@ -28,14 +31,8 @@ public class QrCodeServiceTest {
     @InjectMocks
     private QrCodeService qrCodeService;
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-    }
-
     @Test
     void testGerandoDadosQrCode() {
-        Long id = 1L;
         String valor = "100.00";
         String descricao = "Test QR Code";
         String status = "Ativo";
@@ -43,18 +40,33 @@ public class QrCodeServiceTest {
         LocalDate dataExpiracao = LocalDate.now().plusDays(10);
 
         QrCode qrCode = new QrCode();
-        qrCode.setId(id);
         qrCode.setValor(valor);
         qrCode.setDescricao(descricao);
         qrCode.setStatus(status);
         qrCode.setDataAtualizacao(dataAtualizacao);
         qrCode.setDataExpiracao(dataExpiracao);
 
-        when(qrCodeRepository.save(any(QrCode.class))).thenReturn(qrCode);
+        when(qrCodeRepository.save(any(QrCode.class))).thenAnswer(invocation -> {
+            QrCode savedQrCode = invocation.getArgument(0);
+            savedQrCode.setId(1L);
+            return savedQrCode;
+        });
+
+        when(qrCodeRepository.findById(1L)).thenReturn(Optional.of(qrCode));
+
+        qrCode = qrCodeRepository.save(qrCode);
+        Long id = qrCode.getId();
 
         assertDoesNotThrow(() -> qrCodeService.gerarDadosQrCode(id, valor, descricao, status, dataAtualizacao, dataExpiracao));
 
-        verify(qrCodeRepository, times(1)).save(any(QrCode.class));
+        QrCode dadosQrCode = qrCodeRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("QrCode não encontrado com o id " + id));
+        assertNotNull(dadosQrCode, "QrCode não deve ser nulo");
+        assertEquals(id, dadosQrCode.getId(), "IDs devem ser iguais");
+        assertEquals(valor, dadosQrCode.getValor(), "Valores devem ser iguais");
+        assertEquals(descricao, dadosQrCode.getDescricao(), "Descrições devem ser iguais");
+        assertEquals(status, dadosQrCode.getStatus(), "Status devem ser iguais");
+        assertEquals(dataAtualizacao, dadosQrCode.getDataAtualizacao(), "Datas de atualização devem ser iguais");
+        assertEquals(dataExpiracao, dadosQrCode.getDataExpiracao(), "Datas de expiração devem ser iguais");
     }
 
     @Test
@@ -76,16 +88,32 @@ public class QrCodeServiceTest {
         qrCode.setDataExpiracao(dataExpiracao);
         qrCode.setDataVencimento(dataVencimento);
 
-        when(qrCodeRepository.save(any(QrCode.class))).thenReturn(qrCode);
+        when(qrCodeRepository.save(any(QrCode.class))).thenAnswer(invocation -> {
+            QrCode savedQrCode = invocation.getArgument(0);
+            savedQrCode.setId(1L);
+            return savedQrCode;
+        });
 
-        assertDoesNotThrow(() -> qrCodeService.gerarDadosQrCodeVencimento(id, valor, descricao, status, dataAtualizacao, dataExpiracao, dataVencimento));
+        when(qrCodeRepository.findById(1L)).thenReturn(Optional.of(qrCode));
 
-        verify(qrCodeRepository, times(1)).save(any(QrCode.class));
+        qrCode = qrCodeRepository.save(qrCode);
+        Long idGenerated = qrCode.getId();
+
+        assertDoesNotThrow(() -> qrCodeService.gerarDadosQrCodeVencimento(idGenerated, valor, descricao, status, dataAtualizacao, dataExpiracao, dataVencimento));
+
+        QrCode dadosQrCode = qrCodeRepository.findById(idGenerated).orElseThrow(() -> new EntityNotFoundException("QrCode não encontrado com o id " + idGenerated));
+        assertNotNull(dadosQrCode, "QrCode não deve ser nulo");
+        assertEquals(idGenerated, dadosQrCode.getId(), "IDs devem ser iguais");
+        assertEquals(valor, dadosQrCode.getValor(), "Valores devem ser iguais");
+        assertEquals(descricao, dadosQrCode.getDescricao(), "Descrições devem ser iguais");
+        assertEquals(status, dadosQrCode.getStatus(), "Status devem ser iguais");
+        assertEquals(dataAtualizacao, dadosQrCode.getDataAtualizacao(), "Datas de atualização devem ser iguais");
+        assertEquals(dataExpiracao, dadosQrCode.getDataExpiracao(), "Datas de expiração devem ser iguais");
+        assertEquals(dataVencimento, dadosQrCode.getDataVencimento(), "Datas de vencimento devem ser iguais");
     }
 
     @Test
     void testStatusOpen() {
-        Long id = 1L;
         String valor = "100.00";
         String descricao = "Test QR Code";
         String status = null;
@@ -94,7 +122,6 @@ public class QrCodeServiceTest {
         LocalDate dataVencimento = LocalDate.now().plusDays(5);
 
         QrCode qrCode = new QrCode();
-        qrCode.setId(id);
         qrCode.setValor(valor);
         qrCode.setDescricao(descricao);
         qrCode.setStatus("OPEN");
@@ -102,11 +129,22 @@ public class QrCodeServiceTest {
         qrCode.setDataExpiracao(dataExpiracao);
         qrCode.setDataVencimento(dataVencimento);
 
-        when(qrCodeRepository.save(any(QrCode.class))).thenReturn(qrCode);
+        when(qrCodeRepository.save(any(QrCode.class))).thenAnswer(invocation -> {
+            QrCode savedQrCode = invocation.getArgument(0);
+            savedQrCode.setId(1L);
+            return savedQrCode;
+        });
+
+        when(qrCodeRepository.findById(1L)).thenReturn(Optional.of(qrCode));
+
+        qrCode = qrCodeRepository.save(qrCode);
+        Long id = qrCode.getId();
 
         qrCodeService.gerarDadosQrCodeVencimento(id, valor, descricao, status, dataAtualizacao, dataExpiracao, dataVencimento);
 
-        verify(qrCodeRepository, times(1)).save(argThat(savedQrCode -> "OPEN".equals(savedQrCode.getStatus())));
+        QrCode dadosQrCode = qrCodeRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("QrCode não encontrado com o id " + id));
+        assertNotNull(dadosQrCode, "QrCode não deve ser nulo");
+        assertEquals("OPEN", dadosQrCode.getStatus(), "Status deve ser 'OPEN'");
     }
 
     @Test
@@ -126,7 +164,7 @@ public class QrCodeServiceTest {
         LocalDate dataAtualizacao = null;
         LocalDate dataExpiracao = null;
 
-        assertThrows(IllegalArgumentException.class, () -> qrCodeService.validarDadosQrCode(id, valor, dataAtualizacao, dataExpiracao));
+        assertThrows(IllegalArgumentException.class, () -> qrCodeService.validarDadosQrCode(id, valor, dataAtualizacao, dataExpiracao), "Deve lançar IllegalArgumentException");
     }
 
     @Test
@@ -140,6 +178,6 @@ public class QrCodeServiceTest {
     void testValidarDataVencimentoInvalid() {
         LocalDate dataVencimento = LocalDate.now().minusDays(1);
 
-        assertThrows(IllegalArgumentException.class, () -> qrCodeService.validarDataVencimento(dataVencimento));
+        assertThrows(IllegalArgumentException.class, () -> qrCodeService.validarDataVencimento(dataVencimento), "Deve lançar IllegalArgumentException");
     }
 }

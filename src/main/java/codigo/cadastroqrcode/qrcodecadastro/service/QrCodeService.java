@@ -28,6 +28,9 @@ public class QrCodeService {
 
     private static final String DESTINO_ARQUIVO = "C:\\Users\\dsain\\Documents";
     private static final String DATA_FORMATADA = "yyyyMMddhhmmss";
+    private static final String CHARSET = "UTF-8";
+    private static final int QR_CODE_HEIGHT = 400;
+    private static final int QR_CODE_WIDTH = 400;
 
     private final QrCodeRepository qrCodeRepository;
 
@@ -133,7 +136,7 @@ public class QrCodeService {
     private void salvarQrCodeComoImagem(String data) {
         try {
             String path = prepararLocalDestinoQr();
-            processarQrCode(data, path, "UTF-8", 400, 400);
+            processarQrCode(data, path, CHARSET, QR_CODE_HEIGHT, QR_CODE_WIDTH);
         } catch (WriterException | IOException e) {
             log.error("Erro ao salvar QR Code como imagem", e);
         }
